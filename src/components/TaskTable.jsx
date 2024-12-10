@@ -9,33 +9,42 @@ import { fetchTasks } from "../utils/api";
 const TaskTable = () => {
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState("");
+  const [search, setSearch] = useState("");
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
-    fetchTasks().then(setTasks);
+    const loadTasks = async () => {
+      try {
+        const data = await fetchTasks();
+        setTasks(data || []);
+      } catch (error) {
+        toast.error("⚠️ Failed to fetch tasks. Please try again!");
+      }
+    };
+    loadTasks();
   }, []);
 
   const addTask = () => {
     const newTask = {
       id: tasks.length + 1,
-      title: "New Task",
-      description: "Task Description",
+      title: `Task ${tasks.length + 1}`,
+      description: "Enter task description here...",
       status: "To Do",
     };
     setTasks((prevTasks) => [...prevTasks, newTask]);
-    toast.success("Task added successfully!", { icon: "✅" });
-  };
-
-  const editTask = (id, updatedTask) => {
-    setTasks((prevTasks) =>
-      prevTasks.map((task) => (task.id === id ? updatedTask : task))
-    );
-    toast.info("Task updated successfully!", { icon: "✏️" });
+    toast.success("🎉 Task added successfully!");
   };
 
   const deleteTask = (id) => {
     setTasks((prevTasks) => prevTasks.filter((task) => task.id !== id));
-    toast.error("Task deleted successfully!", { icon: "🗑️" });
+    toast.error("🗑️ Task deleted successfully!");
   };
+
+  const filteredTasks = tasks.filter(
+    (task) =>
+      task.status.includes(filter) &&
+      task.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   const columns = [
     { title: "Task ID", field: "id", width: 80, editable: false },
@@ -44,13 +53,9 @@ const TaskTable = () => {
     {
       title: "Status",
       field: "status",
-      editor: "select",  // Correct editor for dropdown
+      editor: "select",
       editorParams: {
-        values: ["To Do", "In Progress", "Done"],  // Status options
-      },
-      cellEdited: (cell) => {
-        const updatedTask = cell.getRow().getData();
-        editTask(updatedTask.id, updatedTask);
+        values: ["To Do", "In Progress", "Done"],
       },
     },
     {
@@ -63,25 +68,40 @@ const TaskTable = () => {
   ];
 
   return (
-    <div className="p-6 bg-gradient-to-br from-blue-50 via-purple-100 to-pink-100 min-h-screen">
+    <div
+      className={`min-h-screen p-6 transition-all ${isDarkMode
+          ? "bg-gradient-to-b from-gray-900 via-gray-800 to-black text-gray-200"
+          : "bg-gradient-to-br from-white to-gray-100 text-gray-900"
+        }`}
+    >
       <ToastContainer />
-      <header className="text-center py-4">
-        <h1 className="text-5xl font-extrabold text-purple-600">
-          Task List Manager
+
+      {/* Header Section */}
+      <header className="text-center py-6 shadow-lg rounded-lg bg-gradient-to-r from-cyan-400 via-teal-500 to-blue-600">
+        <h1 className="text-5xl font-bold text-white drop-shadow-lg animate-pulse">
+        Task List Manager 
         </h1>
-        <p className="mt-2 text-gray-600">
-          Organize your tasks efficiently with style ✨
-        </p>
       </header>
-      <div className="flex justify-between items-center my-4">
+
+
+      {/* Controls */}
+      <div className="flex justify-between items-center mt-10 px-6">
         <button
-          className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-2 rounded shadow-lg hover:shadow-xl transition-transform transform hover:scale-105"
+          className="bg-gradient-to-r from-green-400 to-blue-500 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:scale-105 transform transition-transform hover:shadow-xl"
           onClick={addTask}
         >
-          Add Task
+          + Add Task
         </button>
+
+        <input
+          type="text"
+          placeholder="Search tasks..."
+          className="rounded-lg px-4 py-2 border-2 border-gray-300 focus:ring-2 text-gray-900 focus:ring-blue-500 focus:outline-none shadow-md"
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
         <select
-          className="border border-gray-300 rounded px-4 py-2 shadow-md focus:outline-none focus:ring-2 focus:ring-purple-400"
+          className="rounded-lg px-4 py-2 border-2 border-gray-300 focus:ring-2 text-gray-900 focus:ring-purple-500 focus:outline-none shadow-md"
           onChange={(e) => setFilter(e.target.value)}
         >
           <option value="">All</option>
@@ -89,18 +109,24 @@ const TaskTable = () => {
           <option value="In Progress">In Progress</option>
           <option value="Done">Done</option>
         </select>
+
+        <button
+          className="bg-gradient-to-r from-gray-700 to-gray-900 text-white px-6 py-2 rounded-full hover:scale-105 transition-transform shadow-lg hover:shadow-xl"
+          onClick={() => setIsDarkMode((prev) => !prev)}
+        >
+          {isDarkMode ? "Light Mode ☀️" : "Dark Mode 🌙"}
+        </button>
       </div>
-      <ReactTabulator
-        data={filter ? tasks.filter((task) => task.status === filter) : tasks}
-        columns={columns}
-        layout="fitData"
-        className="rounded-lg shadow-lg"
-      />
-      <footer className="mt-8 text-center">
-        <p className="text-sm text-gray-500">
-          Built with 💜 by [Shubham]
-        </p>
-      </footer>
+
+      {/* Task Table */}
+      <div className="mt-8 rounded-lg shadow-lg bg-white p-4">
+        <ReactTabulator
+          data={filteredTasks}
+          columns={columns}
+          layout="fitDataFill"
+          className="rounded-lg"
+        />
+      </div>
     </div>
   );
 };
